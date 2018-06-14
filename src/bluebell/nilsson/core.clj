@@ -138,6 +138,15 @@
            ~@(:body parsed))]
     the-let))
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Interface
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 (defmacro nlet [& args]
   (let [parsed (spec/conform ::nilsson-let args)]
     (if (= parsed ::spec/invalid)
@@ -145,12 +154,29 @@
                       {:explanation (spec/explain-str ::nilsson-let args)}))
       (generate-nlet parsed))))
 
-;; Evaluates 
+;; Evaluates
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Utilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmacro result-or-exception [& body]
   `(try
      [(do ~@body) nil]
      (catch Throwable e#
        [nil e#])))
+
+(defn conform-or-info [sp expr]
+  (let [x (spec/conform sp expr)]
+    (if (= x ::spec/invalid)
+      [nil {:spec sp
+            :expr expr}]
+      [x nil])))
 
 
 (comment

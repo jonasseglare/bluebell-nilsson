@@ -3,7 +3,10 @@
             [clojure.test :refer :all]
             [clojure.spec.alpha :as spec]
             [clojure.string :as cljstr]
+            [clojure.java.io :as io]
             [bluebell.nilsson.core :refer :all :as nilsson]))
+
+
 
 (deftest a-test
   (testing "FIXME, I fail."
@@ -71,7 +74,20 @@
   (is (nil? (normalize-vec-2 [0 0])))
   (is (= [(/ 3.0 5) (/ 4.0 5)] (normalize-vec-2 [3 4]))))
 
+(spec/def ::file-data-spec (spec/* #{"a" "b" "c"}))
+
 (defn parse-file [filename]
   (nlet [[file-contents file-exception] (result-or-exception (slurp filename))
-         file-lines (cljstr/split-lines file-contents)]
-        file-lines))
+         file-lines (cljstr/split-lines file-contents)
+         [good-data bad-format-info] (conform-or-info ::file-data-spec file-lines)
+         a-count (count (filter (partial = "a") good-data))
+         bad-file  (do file-exception [:bad-file filename])
+         bad-format [:bad-format bad-format-info]]
+        (or a-count
+            bad-file
+            bad-format)))
+
+(deftest parse-file-test
+  (is (= 4 (parse-file (io/resource "goodfile.txt"))))
+  (is (= :bad-format (first (parse-file (io/resource "badfile.txt")))))
+  (is (= :bad-file (first (parse-file (io/resource "le.txt"))))))
