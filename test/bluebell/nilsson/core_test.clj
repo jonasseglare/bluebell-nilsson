@@ -143,3 +143,13 @@
   (is (number? (bmi-calc {:mass-kg 81 :height-m 1.73})))
   (is (number? (bmi-calc {:mass-lb 179 :height-in 68})))
   (is (nil? (bmi-calc {:mass-kg 81 :height-in 1.73}))))
+
+(defn add-good-and-bad [g b]
+  (nlet [good (untag :good g)
+         bad (untag :bad b)
+         result (+ good bad)]
+        result))
+
+(deftest agab
+  (is (= 7 (add-good-and-bad [:good 3] [:bad 4])))
+  (is (nil? (add-good-and-bad [:good 3] [:badd 4]))))
