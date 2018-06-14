@@ -126,6 +126,20 @@
          bmi-en (* 703 (/ mass-lb (* height-in height-in)))]
         (nilor bmi-si bmi-en)))
 
+(defn tagged? [tg x]
+  (and (vector? x)
+       (= tg (first x))))
+
+(defn untag [tg x]
+  (if (tagged? tg x)
+    (second x)))
+
+(defn untag-or-value [tg x]
+  (apply-or-last-value untag tg x))
+
+
+
+
 (defn unary-op [x]
   (nlet [x-sq (untag :square x)
          x-neg (untag :negate x)

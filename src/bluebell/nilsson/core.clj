@@ -203,19 +203,17 @@
   (if (not (apply-pred f x args))
     x))
 
-(defn tagged? [tg x]
-  (and (vector? x)
-       (= tg (first x))))
+(defn apply-or-last-value [f & args]
+  (let [y (apply f args)]
+    (if (nil? y)
+      [nil (last args)]
+      [y nil])))
 
-(defn untag-or-value [tg x]
-  (if (tagged? tg x)
-    [(second x) nil]
-    [nil x]))
-
-(defn untag [tg x]
-  (if (tagged? tg x)
-    (second x)))
-
+(defn apply-or-first-value [f & args]
+  (let [y (apply f args)]
+    (if (nil? y)
+      [nil (first args)]
+      [y nil])))
 
 (comment
   (do
