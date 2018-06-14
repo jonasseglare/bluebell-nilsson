@@ -2,7 +2,8 @@
   (:require [symbol-analyzer.core :as analyzer]
             [clojure.walk :as walk]
             [clojure.spec.alpha :as spec]
-            [symbol-analyzer.extraction :as extraction]))
+            [symbol-analyzer.extraction :as extraction]
+            [clojure.set :as cljset]))
 
 (defn except
   "Mark a symbol as not being tracked"
@@ -95,20 +96,47 @@
 (defn find-all-symbols [x]
   (find-all-symbols-sub [] x))
 
+(defn req-all [symbols]
+  `[_# (do ~@(map (fn [sym]
+                    `(assert
+                      (not (nil? ~sym))
+                      ~(str "Symbol '" sym "' must not be nil.")))
+                  symbols))])
+
+(defn req-one [symbols]
+  `[_# (assert (or ~@(map (fn [sym] `(not (nil? ~sym))) symbols))
+              ~(str "At least one symbol in " symbols " must be non-nil."))])
+
+
+(defn wrap-reqs [req-syms expr]
+  (if (empty? req-syms)
+    expr
+    `(if (and ~@(map (fn [sym] `(not (nil? ~sym))) req-syms))
+       ~expr)))
+
 (defn generate-binding [[symbol-set bindings] bd]
-  (let [dirs (set (:directives bd))]
-    [symbol-set (reduce into bindings [[(:symbols bd) (:expr bd)]])]))
+  (let [dirs (set (:directives bd))
+        all-symbols (find-all-symbols (:symbols bd))
+        required-symbols (cljset/intersection symbol-set
+                                              (unknown-symbols (:expr bd)))]
+    [((if (contains? dirs :exclude) cljset/difference cljset/union)
+      symbol-set
+      (set all-symbols))
+     (reduce into bindings [[(:symbols bd) (wrap-reqs required-symbols (:expr bd))]
+                            (cond
+                              (contains? dirs :req-all) (req-all all-symbols)
+                              (contains? dirs :req-one) (req-one all-symbols)
+                              :default [])])]))
 
 (defn generate-bindings [bindings]
-  (let [bd (reduce generate-binding [#{} []] bindings)]
-    (println "bd=" bd)
-    (second bd)
-    []))
+  (second (reduce generate-binding [#{} []] bindings)))
 
 (defn generate-nlet [parsed]
-  `(let ~(generate-bindings
-          (:bindings parsed))
-     ~@(:body parsed)))
+  (let [the-let
+        `(let ~(generate-bindings
+                (:bindings parsed))
+           ~@(:body parsed))]
+    the-let))
 
 (defmacro nlet [& args]
   (let [parsed (spec/conform ::nilsson-let args)]
@@ -117,11 +145,19 @@
                       {:explanation (spec/explain-str ::nilsson-let args)}))
       (generate-nlet parsed))))
 
+;; Evaluates 
+(defmacro result-or-exception [& body]
+  `(try
+     [(do ~@body) nil]
+     (catch Throwable e#
+       [nil e#])))
+
 
 (comment
   (do
 
     (macroexpand '(nlet [:req-one k (if (= :a :a) 3)] k))
+    (macroexpand '(nlet [:req-all k (if (= :a :a) 3)] k))
 
     ))
 
