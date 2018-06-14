@@ -130,8 +130,9 @@
   (nlet [x-sq (untag :square x)
          x-neg (untag :negate x)
          x-squared (* x-sq x-sq)
-         x-negative (- x-neg)]
-        (nilor x-squared x-negative)))
+         x-negative (- x-neg)
+         result (either x-squared x-negative)]
+        result))
 
 (deftest unary-op-test
   (is (= 9 (unary-op [:square 3])))

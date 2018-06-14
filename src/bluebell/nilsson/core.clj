@@ -21,7 +21,6 @@
 (defn flatten? [x]
   (let [t (first (spec/conform ::subexpr x))]
     (= :coll t)))
-
 (defn deep-flatten-into [dst x]
   (if (flatten? x)
     (reduce deep-flatten-into dst x)
@@ -153,19 +152,6 @@
   [x]
   x)
 
-(defmacro either
-  "Choose the first symbol that is not nil"
-  [& symbols]
-  (assert (every? symbol? symbols))
-  `(or ~@(map (fn [x] `(except ~x)) symbols)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;;  Utilities
-;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defmacro nilor [& args]
   (if (empty? args)
     nil
@@ -173,6 +159,19 @@
        (if (nil? f#)
          (nilor ~@(rest args))
          f#))))
+
+(defmacro either
+  "Choose the first symbol that is not nil"
+  [& symbols]
+  (assert (every? symbol? symbols))
+  `(nilor ~@(map (fn [x] `(except ~x)) symbols)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;;  Utilities
+;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro result-or-exception [& body]
   `(try
