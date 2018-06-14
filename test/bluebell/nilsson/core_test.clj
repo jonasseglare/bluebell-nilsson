@@ -23,8 +23,8 @@
 
 (deftest spec-test
   (is (spec/valid? ::nilsson/nilsson-let '[[a 9 b 30] a b c]))
-  (is (spec/valid? ::nilsson/nilsson-let '[[:req-all a 9 :req-one b 30] a b c]))
-  (is (not (spec/valid? ::nilsson/nilsson-let '[:req-all a 9 :req-one b 30 a b c]))))
+  (is (spec/valid? ::nilsson/nilsson-let '[[:req a 9 :req-one b 30] a b c]))
+  (is (not (spec/valid? ::nilsson/nilsson-let '[:req a 9 :req-one b 30 a b c]))))
 
 (deftest find-all-symbols-test
   (is (= (find-all-symbols {:a [1 ['a 'b]]})
@@ -55,7 +55,7 @@
   (is (thrown? Throwable (my-positive-number -3 -4))))
 
 (defn my-positive-numbers [a b]
-  (nlet [:req-all [x y] (map neg-2-nil [a b])]
+  (nlet [:req [x y] (map neg-2-nil [a b])]
         [x y]))
 
 (deftest my-pos-num-test-2
@@ -91,3 +91,54 @@
   (is (= 4 (parse-file (io/resource "goodfile.txt"))))
   (is (= :bad-format (first (parse-file (io/resource "badfile.txt")))))
   (is (= :bad-file (first (parse-file (io/resource "le.txt"))))))
+
+(defn safe-sqrt-2 [x]
+  (nlet [[good bad] (split-by-pred >= x 0)
+         result (Math/sqrt good)
+         error-msg [:bad-input bad]]
+        (or result error-msg)))
+
+(deftest safe-sqrt-2test
+  (is (= 2.0 (safe-sqrt-2 4.0)))
+  (is (= [:bad-input -3] (safe-sqrt-2 -3))))
+
+(defn safe-sqrt-3 [x]
+  (nlet [x-valid (pred >= x 0.0)
+         result (Math/sqrt x-valid)]
+        result))
+
+(deftest safe-sqrt-3-test
+  (is (= 2.0 (safe-sqrt-3 4.0)))
+  (is (nil? (safe-sqrt-3 -4.0))))
+
+(deftest nilor-test
+  (is (= false (nilor false 4)))
+  (is (= 4 (nilor nil 4))))
+
+(defn bmi-calc [data-map]
+  (nlet [height-m (:height-m data-map)
+         mass-kg (:mass-kg data-map)
+
+         height-in (:height-in data-map)
+         mass-lb (:mass-lb data-map)
+
+         bmi-si (/ mass-kg (* height-m height-m))
+         bmi-en (* 703 (/ mass-lb (* height-in height-in)))]
+        (nilor bmi-si bmi-en)))
+
+(defn unary-op [x]
+  (nlet [x-sq (untag :square x)
+         x-neg (untag :negate x)
+         x-squared (* x-sq x-sq)
+         x-negative (- x-neg)]
+        (nilor x-squared x-negative)))
+
+(deftest unary-op-test
+  (is (= 9 (unary-op [:square 3])))
+  (is (= -3 (unary-op [:negate 3]))))
+
+(deftest bmi-calc-test
+  (is (nil? (bmi-calc {:mass 119})))
+  (is (number? (bmi-calc {:mass-kg 81 :height-m 1.73})))
+  (is (number? (bmi-calc {:mass-lb 179 :height-in 68})))
+  (is (nil? (bmi-calc {:mass-kg 81 :height-in 1.73}))))

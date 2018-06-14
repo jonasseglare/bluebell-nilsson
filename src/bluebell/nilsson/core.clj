@@ -5,7 +5,6 @@
             [symbol-analyzer.extraction :as extraction]
             [clojure.set :as cljset]))
 
-
 (declare except)
 
 (defn is-except? [x]
@@ -60,7 +59,7 @@
 
 
 (spec/def ::directive #{:req-one  ; Require one of the symbols to be non-nil
-                        :req-all  ; Require all symbols to be non-nil
+                        :req  ; Require all symbols to be non-nil
                         :exclude  ; Don't take the symbols into consideration
                         })
 
@@ -116,7 +115,7 @@
       (set all-symbols))
      (reduce into bindings [[(:symbols bd) (wrap-reqs required-symbols (:expr bd))]
                             (cond
-                              (contains? dirs :req-all) (req-all all-symbols)
+                              (contains? dirs :req) (req-all all-symbols)
                               (contains? dirs :req-one) (req-one all-symbols)
                               :default [])])]))
 
@@ -167,6 +166,14 @@
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defmacro nilor [& args]
+  (if (empty? args)
+    nil
+    `(let [f# ~(first args)]
+       (if (nil? f#)
+         (nilor ~@(rest args))
+         f#))))
+
 (defmacro result-or-exception [& body]
   `(try
      [(do ~@body) nil]
@@ -180,12 +187,42 @@
             :expr expr}]
       [x nil])))
 
+(defn apply-pred [pred x args]
+  (apply pred (into [x] args)))
+
+(defn split-by-pred [pred value & args]
+  {:pre [(fn? pred)]}
+  (if (apply-pred pred value args)
+    [value nil]
+    [nil value]))
+
+(defn pred [f x & args]
+  (if (apply-pred f x args)
+    x))
+
+(defn not-pred [f x & args]
+  (if (not (apply-pred f x args))
+    x))
+
+(defn tagged? [tg x]
+  (and (vector? x)
+       (= tg (first x))))
+
+(defn untag-or-value [tg x]
+  (if (tagged? tg x)
+    [(second x) nil]
+    [nil x]))
+
+(defn untag [tg x]
+  (if (tagged? tg x)
+    (second x)))
+
 
 (comment
   (do
 
     (macroexpand '(nlet [:req-one k (if (= :a :a) 3)] k))
-    (macroexpand '(nlet [:req-all k (if (= :a :a) 3)] k))
+    (macroexpand '(nlet [:req k (if (= :a :a) 3)] k))
 
     ))
 
