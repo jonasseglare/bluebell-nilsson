@@ -19,5 +19,11 @@
 
 (deftest spec-test
   (is (spec/valid? ::nilsson/nilsson-let '[[a 9 b 30] a b c]))
-  (is (spec/valid? ::nilsson/nilsson-let '[[:a a 9 :b :c b 30] a b c]))
-  (is (not (spec/valid? ::nilsson/nilsson-let '[:a a 9 :b :c b 30 a b c]))))
+  (is (spec/valid? ::nilsson/nilsson-let '[[:req-all a 9 :req-one b 30] a b c]))
+  (is (not (spec/valid? ::nilsson/nilsson-let '[:req-all a 9 :req-one b 30 a b c]))))
+
+(deftest find-all-symbols-test
+  (is (= (find-all-symbols {:a [1 ['a 'b]]})
+         '[a b]))
+  (is (= (find-all-symbols {:a [1 ['a 'b {'c 'd}]]})
+         '[a b c d])))

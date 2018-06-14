@@ -66,10 +66,13 @@
   `(quote ~(unknown-symbols expr)))
 
 
-(spec/def ::directive keyword?)
+(spec/def ::directive #{:req-one  ; Require one of the symbols to be non-nil
+                        :req-all  ; Require all symbols to be non-nil
+                        :exclude  ; Don't take the symbols into consideration
+                        })
 
-(spec/def ::symbols (spec/or :one symbol?
-                             :many coll?))
+(spec/def ::symbols #(or (symbol? %)
+                         (coll? %)))
 
 (spec/def ::binding (spec/cat
                      :directives (spec/* ::directive)
@@ -83,7 +86,29 @@
 (spec/def ::nilsson-let (spec/cat :bindings (spec/spec ::bindings)
                                   :body ::body))
 
-(defn generate-nlet [parsed])
+(defn find-all-symbols-sub [dst x]
+  (cond
+    (symbol? x) (conj dst x)
+    (coll? x) (reduce find-all-symbols-sub dst x)
+    :default dst))
+
+(defn find-all-symbols [x]
+  (find-all-symbols-sub [] x))
+
+(defn generate-binding [[symbol-set bindings] bd]
+  (let [dirs (set (:directives bd))]
+    [symbol-set (reduce into bindings [[(:symbols bd) (:expr bd)]])]))
+
+(defn generate-bindings [bindings]
+  (let [bd (reduce generate-binding [#{} []] bindings)]
+    (println "bd=" bd)
+    (second bd)
+    []))
+
+(defn generate-nlet [parsed]
+  `(let ~(generate-bindings
+          (:bindings parsed))
+     ~@(:body parsed)))
 
 (defmacro nlet [& args]
   (let [parsed (spec/conform ::nilsson-let args)]
@@ -92,6 +117,13 @@
                       {:explanation (spec/explain-str ::nilsson-let args)}))
       (generate-nlet parsed))))
 
+
+(comment
+  (do
+
+    (macroexpand '(nlet [:req-one k (if (= :a :a) 3)] k))
+
+    ))
 
 #_(defn known-symbols [expr]
   (->> expr
