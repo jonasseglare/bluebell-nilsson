@@ -5,16 +5,8 @@
             [symbol-analyzer.extraction :as extraction]
             [clojure.set :as cljset]))
 
-(defn except
-  "Mark a symbol as not being tracked"
-  [x]
-  x)
 
-(defmacro either
-  "Choose the first symbol that is not nil"
-  [& symbols]
-  (assert (every? symbol? symbols))
-  `(or ~@(map (fn [x] `(except ~x)) symbols)))
+(declare except)
 
 (defn is-except? [x]
   (let [v (-> x meta :symbol-info :var)]
@@ -157,6 +149,16 @@
 ;; Evaluates
 
 
+(defn except
+  "Mark a symbol as not being tracked"
+  [x]
+  x)
+
+(defmacro either
+  "Choose the first symbol that is not nil"
+  [& symbols]
+  (assert (every? symbol? symbols))
+  `(or ~@(map (fn [x] `(except ~x)) symbols)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
