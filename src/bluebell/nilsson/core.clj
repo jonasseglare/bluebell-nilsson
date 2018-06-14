@@ -4,10 +4,14 @@
             [clojure.spec.alpha :as spec]
             [symbol-analyzer.extraction :as extraction]))
 
-(defn except [x]
+(defn except
+  "Mark a symbol as not being tracked"
+  [x]
   x)
 
-(defmacro either [& symbols]
+(defmacro either
+  "Choose the first symbol that is not nil"
+  [& symbols]
   (assert (every? symbol? symbols))
   `(or ~@(map (fn [x] `(except ~x)) symbols)))
 
@@ -34,9 +38,6 @@
 (defn deep-flatten [x]
     (deep-flatten-into [] x))
 
-(defn disp [x]
-  x)
-
 (defn analyze-symbols [expr symbol-transducer]
   (transduce
    (comp (filter symbol?)
@@ -44,9 +45,9 @@
    conj
    []
    (-> expr
+       walk/macroexpand-all
        analyzer/analyze-sexp
-       deep-flatten
-       disp)))
+       deep-flatten)))
 
 (defn unknown-symbols [expr]
   (set
@@ -65,8 +66,31 @@
   `(quote ~(unknown-symbols expr)))
 
 
+(spec/def ::directive keyword?)
 
+(spec/def ::symbols (spec/or :one symbol?
+                             :many coll?))
 
+(spec/def ::binding (spec/cat
+                     :directives (spec/* ::directive)
+                     :symbols ::symbols
+                     :expr any?))
+
+(spec/def ::bindings (spec/* ::binding))
+
+(spec/def ::body (spec/* any?))
+
+(spec/def ::nilsson-let (spec/cat :bindings (spec/spec ::bindings)
+                                  :body ::body))
+
+(defn generate-nlet [parsed])
+
+(defmacro nlet [& args]
+  (let [parsed (spec/conform ::nilsson-let args)]
+    (if (= parsed ::spec/invalid)
+      (throw (ex-info "Failed to parse nlet"
+                      {:explanation (spec/explain-str ::nilsson-let args)}))
+      (generate-nlet parsed))))
 
 
 #_(defn known-symbols [expr]
