@@ -129,6 +129,9 @@
     the-let))
 
 
+(defn apply-pred [pred x args]
+  (apply pred (into [x] args)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -152,7 +155,9 @@
   [x]
   x)
 
-(defmacro nilor [& args]
+(defmacro nilor
+  "Like or, but false is also treated as a truthy value. So only nil is falsy"
+  [& args]
   (if (empty? args)
     nil
     `(let [f# ~(first args)]
@@ -174,22 +179,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro result-or-exception [& body]
+  "Returns a 2 element vector either the first 
+element is the value or second element is the exception"
   `(try
      [(do ~@body) nil]
      (catch Throwable e#
        [nil e#])))
 
-(defn conform-or-info [sp expr]
+(defn conform-or-info
+  "Apply a clojure.spec conform and return a vector with either the first element is the conformed value or the second element is a map with spec and expr."
+  [sp expr]
   (let [x (spec/conform sp expr)]
     (if (= x ::spec/invalid)
       [nil {:spec sp
             :expr expr}]
       [x nil])))
 
-(defn apply-pred [pred x args]
-  (apply pred (into [x] args)))
-
-(defn split-by-pred [pred value & args]
+(defn split-by-pred
+  [pred value & args]
   {:pre [(fn? pred)]}
   (if (apply-pred pred value args)
     [value nil]
